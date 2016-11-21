@@ -17,6 +17,8 @@ package Grep;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.HashMultiset;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -43,12 +45,12 @@ class GrepFiles {
     void printStatistics(){
         try {
             RecursiveFind recursiveFind = new RecursiveFind(directory, packages);
-            Map<String,Integer> stats= PackageStats.getInstance().statistics;
-            Iterator itr =stats.keySet().iterator();
-            while(itr.hasNext()){
-                Object key = itr.next();
-                System.out.println(key + "  "+stats.get(key));
+            Multiset<String> stats= PackageStats.getInstance().statistics;
+
+            for(String key:packages){
+                System.out.println(key +" "+ stats.count(key));
             }
+
         }catch(FileNotFoundException ex){
             System.err.println("File Exceptions");
         }
@@ -77,7 +79,7 @@ class RecursiveFind{
         if(fileList!=null){
             //Iterate files
             for (String file : fileList) {
-                File fileName = new File(directory.getAbsolutePath().concat("/").concat(file));
+                File fileName = new File(directory.getAbsolutePath().concat(File.separator).concat(file));
                 if (!fileName.isDirectory()) {
                     Iterator itr = packageList.iterator();
                     //Iterate packages list
@@ -108,9 +110,9 @@ class RecursiveFind{
  */
  class PackageStats{
     private static PackageStats instance = null;
-    Map<String,Integer> statistics;
+    Multiset<String> statistics;
     private PackageStats(){
-        statistics = new HashMap<String,Integer>();
+        statistics = HashMultiset.create();
     };
     static PackageStats getInstance(){
         if(instance==null) {
@@ -123,21 +125,41 @@ class RecursiveFind{
 
     void incrementPackageCount(String packageName){
         int count=0;
-        if(statistics.get(packageName)==null)
-            statistics.put(packageName,++count);
-        else {
-            count=statistics.get(packageName);
-            statistics.put(packageName,++count);
-        }
+        statistics.add(packageName);
     }
-    Map<String,Integer> getReport(){
+    Multiset<String> getReport(){
         return this.statistics;
     }
 }
 
 public class App {
     public static void main( String[] args ){
-        //TODO Accept args to be used as command line utility
+        //To be used as command line utility
+        //E.g. of program args: C:\\Users\\rvaidya\\Downloads\\source\\playframework\\framework  com.google.common.collect com.google.common.base
+        if(args.length<2){
+            System.err.println("Enter Directory and key to search");
+        }
+        else {
+            String directorypath = args[0];
+            int count=0;
+            if (new File(directorypath).isDirectory()) {
+                List<String> list = new ArrayList();
+                for(String str: args){
+                    //Skip 1st element
+                    if(str==args[0])
+                        continue;;
+                    list.add(str);
+                }
+                //Invoke the utility
+                GrepFiles grepper = new GrepFiles(directorypath,list);
+                grepper.printStatistics();
+            }
+            else{
+                System.err.println("Enter a correct Directory path directory");
+            }
+        }
+
+        //Stub code to run from IDE.
         /*String[] packages ={
                 "com.google.common.annotations",
                 "com.google.common.collect",
@@ -157,7 +179,8 @@ public class App {
                 "com.google.common.xml"};
         List<String> list = new ArrayList();
         Collections.addAll(list,packages);
-        GrepFiles grepper = new GrepFiles("/home/rohit/Downloads/sources/async-http-client",list);
+        GrepFiles grepper = new GrepFiles("C:\\Users\\rvaidya\\Downloads\\source\\playframework\\framework",list);
         grepper.printStatistics();*/
+
     }
 }
